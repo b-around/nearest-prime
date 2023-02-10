@@ -69,7 +69,7 @@ In all, the demonstration uses three clusters. One "on premises," and two remote
 
 2. Python3, pip and postgres dependencies - see instructions below
 3. Skupper v1.0.2 or later. Available at: https://skupper.io/install/index.html
-4. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no chganges.
+4. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no changes.
 
 
 ### Phyton and other dependencies
