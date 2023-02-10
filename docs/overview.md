@@ -65,9 +65,21 @@ In all, the demonstration uses three clusters. One "on premises," and two remote
    podman login registry.redhat.io
    ```
 
-2. Skupper v1.0.2 or later. Available at: https://skupper.io/install/index.html
-3. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no chganges.
+2. Python3 and pip - see instructions below
+3. Skupper v1.0.2 or later. Available at: https://skupper.io/install/index.html
+4. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no chganges.
 
+
+### Isolating the OpenShift Environments
+Check if phyton 3 is available
+```
+pip3 -V
+```
+If needed, install phyton, pip and some dependencies that are nedeed
+```
+sudo yum install python39-devel postgresql-devel
+sudo pip3 install psycopg2-binary
+```
 
 ### Isolating the OpenShift Environments
 To run this demo you will need console access to multiple clusters. To achieve this you need separate kubeconfig files. The git repo has some example environment-setup scripts in the `demo-env` directory.
