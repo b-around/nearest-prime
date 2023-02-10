@@ -70,7 +70,7 @@ In all, the demonstration uses three clusters. One "on premises," and two remote
 4. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no chganges.
 
 
-### Isolating the OpenShift Environments
+### Phyton and other dependencies
 Check if phyton 3 is available
 ```
 pip3 -V
