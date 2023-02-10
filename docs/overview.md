@@ -65,7 +65,7 @@ In all, the demonstration uses three clusters. One "on premises," and two remote
    podman login registry.redhat.io
    ```
 
-2. Python3 and pip - see instructions below
+2. Python3, pip and postgres dependencies - see instructions below
 3. Skupper v1.0.2 or later. Available at: https://skupper.io/install/index.html
 4. OpenShift Local v4.10 - but this should work on any OpenShift 4 verison with no chganges.
 
