@@ -46,6 +46,7 @@ The high-level strucyture of the demo code is:
 - **tools:** contains all the tools for starting/stopping/initialising the database that you will run on your laptop. The database and a database admin tool (pgadmin4) will run as a container on your laptop.
 - **yaml:** contains the yaml files required to deploy to OpenShift.
 
+
 ## Environment Setup and Configuration
 ### Overview
 This example has been tested running two configurations:
@@ -57,6 +58,7 @@ In all, the demonstration uses three clusters. One "on premises," and two remote
 **Note:**
 - There should be no reason this does not work on macOS or other linux distributions for the "on premises environment." The setup script should detect either podman or docker.
 - This example will also work with any other Kubernetes distribution such as EKS and GKE after some very minor tweaks to replace the `oc` commands with `kubectl` commands.
+
 
 ### Demo Prerequisites
 1. In order to pull the Postgresql image you will need a Red Hat account to pull from the Red Hat Container Catalogue. You can log on to the registry using:
