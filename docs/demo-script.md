@@ -1,231 +1,242 @@
 # Demo Script
+Now we can progress to setting up the environment. 
+We need to start by logging in to openShift / Kubernetes and setting up all the RHAI / skupper routers and gateways.
 
-## Deploy RHAI to all Namespaces
 
-### OpenShift Local
-```
-skupper init --site-name on-prem --console-auth=internal --console-user=admin --console-password=password
-```
+## Deploy RHAI to all Namespaces and create links
 
-### Remote Site 1
-```
-skupper init --site-name site-1 --console-auth=internal --console-user=admin --console-password=password
-```
 
-### Remote Site 2
+### Remote Site 1 - APAC
+Open a new command line and run the setup script
 ```
-skupper init --site-name site-2 --console-auth=internal --console-user=admin --console-password=password
+$ . ./setup-apac.sh 
+APAC: demo-env$ 
+
 ```
 
-Check the install status for each site using `skupper status`.
+Login to the OpenShift cluster (you can get the login command from the web console)
 ```
-$ skupper status
-Skupper is enabled for namespace "nearest-prime" with site name "ON-PREM" in interior mode. It is not connected to any other sites. It has no exposed services.
-The site console url is:  https://skupper-nearest-prime.apps-crc.testing
+APAC: demo-env$ oc login --token=sha256~#### --server=https://api.cluster-####.####.sandbox2077.####.com:6443
+W0214 09:59:05.701750   40968 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-apac
+The server uses a certificate signed by an unknown authority.
+You can bypass the certificate check, but any data you send to the server could be intercepted by others.
+Use insecure connections? (y/n): y
+
+Logged into "https://api.cluster-####.####.sandbox2077.####.com:6443" as "#####" using the token provided.
+
+You have access to 66 projects, the list has been suppressed. You can list all projects with 'oc projects'
+
+Using project "default".
+W0214 09:59:14.280453   40968 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-apac
+W0214 09:59:14.280505   40968 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-apac
+
+```
+
+Create a new namespace where you will deploy the nearest prime microservices.
+```
+APAC: demo-env$ oc new-project skupper-apac
+Now using project "skupper-apac" on server "https://api.cluster-####.####.sandbox2077.####.com:6443".
+
+You can add applications to this project with the 'new-app' command. For example, try:
+
+    oc new-app rails-postgresql-example
+
+to build a new example application in Ruby. Or use kubectl to deploy a simple Kubernetes application:
+
+    kubectl create deployment hello-node --image=k8s.gcr.io/serve_hostname
+
+```
+
+Create your skupper router instance
+```
+skupper init --site-name APAC --console-auth=internal --console-user=admin --console-password=password
+```
+
+Check that skupper is properly installed
+```
+APAC: demo-env$ skupper status
+Skupper is enabled for namespace "skupper-apac" with site name "APAC" in interior mode. It is not connected to any other sites. It has no exposed services.
+The site console url is:  https://skupper-skupper-apac.apps.cluster-####.####.sandbox2077.####.com
 The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
-$
-```
-
-## Create the RHAI Application Network
-The on-prem OpenShift Local environment is not externally routable, but the RHPDS andf Open-TLC environments are routable. At each of the routable site, create a token:
-
-```
-skupper token create --token-type cert opentlc-token.yaml
-Connection token written to remote1-token.yaml 
 
 ```
 
+### Local environment
+Open a new command line and run the setup script
 ```
-$ skupper token create --token-type cert rhpds-token.yaml
-Connection token written to remote2-token.yaml 
+$ . ./setup-onprem.sh 
+ONPREM: demo-env$ 
+
 ```
 
-Import the tokens into the On-Premises OpenShift on OpenShift Local uaing the `skupper link create <token filename>` command:
+On this new window, login to the remote site 1 cluster.
 ```
-ONPREM$ skupper link status
+ONPREM: demo-env$ oc login --token=sha256~####-HpGZ8 --server=https://api.cluster-####.####.sandbox2077.opentlc.com:6443 --namespace=skupper-apac
+W0214 10:21:12.008744   42024 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-onprem
+The server uses a certificate signed by an unknown authority.
+You can bypass the certificate check, but any data you send to the server could be intercepted by others.
+Use insecure connections? (y/n): y
+
+Logged into "https://api.cluster-####.####.sandbox2077.opentlc.com:6443" as "#####" using the token provided.
+
+You have access to 67 projects, the list has been suppressed. You can list all projects with 'oc projects'
+
+Using project "skupper-apac".
+W0214 10:21:15.338495   42024 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-onprem
+W0214 10:21:15.338560   42024 loader.go:221] Config not found: /home/admin/.kube/config-nearest-prime-onprem
+
+```
+
+Initialize the local skupper gateway which will link the previously created router and this gateway instance.
+```
+ONPREM: demo-env$ skupper gateway init --type podman --namespace skupper-apac
+Skupper gateway: 'dev02-rhel.localdomain-admin'. Use 'skupper gateway status' to get more information.
+```
+
+Observe if the gateway has started and the remote skupper router reports an established link from the gateway.
+You can also check the links status via the skupper router web console which should be located at something like https://skupper-skupper-apac.apps.cluster-####.####.sandbox2077.opentlc.com/
+```
+ONPREM: demo-env$ skupper gateway status
+Gateway Definition:
+╰─ dev02-rhel.localdomain-admin type:podman version:2.2.1
+
+ONPREM: demo-env$ skupper link status
+
+Links created from this site:
+-------------------------------
 There are no links configured or active
 
-ONPREM$ skupper link create remote1-token.yaml 
-
-Site configured to link to skupper-inter-router-nearest-prime.apps.cluster-8q9n5.8q9n5.sandbox464.opentlc.com:443 (name=link1)
-Check the status of the link using 'skupper link status'.
-
-ONPREM$ skupper link create remote2-token.yaml
-
-Site configured to link to skupper-inter-router-nearest-prime.apps.cluster-6lg79.6lg79.sandbox507.opentlc.com:443 (name=link2)
-Check the status of the link using 'skupper link status'.
-
-ONPREM$ skupper link status
-Link link1 is active
-Link link2 is active
-```
-
-At each site run the command `skupper status`. Observe that each site is connected to two other sites, and the remote sites are connected to one indirectly:
+Currently active links from other sites:
+----------------------------------------
+A link from the namespace  on site 3be3123b1b162219b5a238f13756c7c249d493d4(0f4ea697-9ae9-4da8-9e32-8693c7e5b39e) is active 
 
 ```
-REMOTE1$ skupper status
-Skupper is enabled for namespace "nearest-prime" with site name "site-1" in interior mode. It is connected to 2 other sites (1 indirectly). It has no exposed services.
-The site console url is:  https://skupper-nearest-prime.apps.cluster-8q9n5.8q9n5.sandbox464.opentlc.com
-The credentials for internal console-auth mode are held in secret: 'skupper-console-users'
-$
-```
 
-### Create the Gateway Router
+
+### Remote Site 2 - US
+TO BE ADDEDD...
+
+
+
+
+
+## Expose the DB service to the skupper network
 Finally you need to add the on-premises database to the network. 
+```
+ONPREM: demo-env$ skupper gateway expose db 0.0.0.0 5432 --type podman
+2023/02/14 10:42:06 CREATE io.skupper.router.tcpConnector dev02-rhel.localdomain-admin-egress-db:5432 map[address:db:5432 host:0.0.0.0 name:dev02-rhel.localdomain-admin-egress-db:5432 port:5432 siteId:0f4ea697-9ae9-4da8-9e32-8693c7e5b39e]
 
 ```
-skupper gateway expose db 127.0.0.1 5432 --type podman
-```
 
-Once the gateway has been created successfully, look at the services and pods:
-
-```
-oc get svc,pods
-```
-Observe that the db service has not pods, and the ip address is a local ip adress of the cluster. The RHAI router handles routing a service request over the RHAI network to the on premises local ip address and port.   
+Once the gateway service has been created successfully, look at the services and pods on each cluster.
+Observe that the db service has not associated pods, and the ip address is a local ip adress of the cluster. 
+The RHAI router handles routing a service request over the RHAI network to the on premises local ip address and port.   
 
 ```
-ONPREM$ oc get svc
-NAME                   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)               AGE
-db                     ClusterIP   10.217.4.144   <none>        5432/TCP              33s
-skupper                ClusterIP   10.217.5.195   <none>        8080/TCP,8081/TCP     7m25s
-skupper-router         ClusterIP   10.217.5.210   <none>        55671/TCP,45671/TCP   7m27s
-skupper-router-local   ClusterIP   10.217.4.250   <none>        5671/TCP              7m27s
-ONPREM$ 
-```
+ONPREM: demo-env$ oc get svc,pods
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)               AGE
+service/db                     ClusterIP   172.30.206.88    <none>        5432/TCP              38s
+service/skupper                ClusterIP   172.30.157.143   <none>        8080/TCP,8081/TCP     33m
+service/skupper-router         ClusterIP   172.30.111.79    <none>        55671/TCP,45671/TCP   33m
+service/skupper-router-local   ClusterIP   172.30.167.189   <none>        5671/TCP              33m
+
+NAME                                              READY   STATUS    RESTARTS   AGE
+pod/skupper-router-777cc66994-mg49r               2/2     Running   0          33m
+pod/skupper-service-controller-769c5fbd66-d89bq   1/1     Running   0          33m
 
 ```
-IBMSYD$ oc get svc,pods
-NAME                           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)               AGE
-service/db                     ClusterIP   172.21.185.7   <none>        5432/TCP              25s
-service/skupper                ClusterIP   172.21.227.9   <none>        8080/TCP,8081/TCP     4m4s
-service/skupper-router         ClusterIP   172.21.49.45   <none>        55671/TCP,45671/TCP   4m5s
-service/skupper-router-local   ClusterIP   172.21.7.50    <none>        5671/TCP              4m6s
 
-NAME                                             READY   STATUS    RESTARTS   AGE
-pod/skupper-router-5cdf8bb5cb-w79k5              2/2     Running   0          4m5s
-pod/skupper-service-controller-6d977db56-nph9n   1/1     Running   0          4m3s
-IBMSYD$ 
-```
+
 
 ## Deploy the Remote Applications
-At each of the remote sites, create the nearest prime deployment:
-
+Let's now deploy the application that will consume the database and observe the services and pods that got created
+Observe that there is no service for the nearestprime deployment at the remote sites.
 ```
-oc apply -f nearestprime.yaml
-```
+APAC: yaml$ oc apply -f apac-nearestprime.yaml --namespace=skupper-apac
+deployment.apps/nearestprime created
 
-```
-IBMSYD$ oc get svc,pods
-NAME                           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)               AGE
-service/db                     ClusterIP   172.21.185.7   <none>        5432/TCP              6m58s
-service/skupper                ClusterIP   172.21.227.9   <none>        8080/TCP,8081/TCP     10m
-service/skupper-router         ClusterIP   172.21.49.45   <none>        55671/TCP,45671/TCP   10m
-service/skupper-router-local   ClusterIP   172.21.7.50    <none>        5671/TCP              10m
-
-NAME                                             READY   STATUS    RESTARTS   AGE
-pod/nearestprime-d78ccc599-94nrg                 1/1     Running   0          74s
-pod/skupper-router-5cdf8bb5cb-w79k5              2/2     Running   0          10m
-pod/skupper-service-controller-6d977db56-nph9n   1/1     Running   0          10m
-IBMSYD$ 
-```
-
-Observe that there is a pod but no service created for the deployment.
-
-Now look at the services and pods on the on-premises cluster:
-```
-ONPREM$ oc get svc,pods
-NAME                           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)               AGE
-service/db                     ClusterIP   10.217.4.144   <none>        5432/TCP              9m59s
-service/skupper                ClusterIP   10.217.5.195   <none>        8080/TCP,8081/TCP     16m
-service/skupper-router         ClusterIP   10.217.5.210   <none>        55671/TCP,45671/TCP   16m
-service/skupper-router-local   ClusterIP   10.217.4.250   <none>        5671/TCP              16m
+APAC: yaml$ oc get svc,pods
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)               AGE
+service/db                     ClusterIP   172.30.206.88    <none>        5432/TCP              5m14s
+service/skupper                ClusterIP   172.30.157.143   <none>        8080/TCP,8081/TCP     38m
+service/skupper-router         ClusterIP   172.30.111.79    <none>        55671/TCP,45671/TCP   38m
+service/skupper-router-local   ClusterIP   172.30.167.189   <none>        5671/TCP              38m
 
 NAME                                              READY   STATUS    RESTARTS   AGE
-pod/skupper-router-55f4498857-k6zg2               2/2     Running   0          16m
-pod/skupper-service-controller-64659988b8-j6985   1/1     Running   0          16m
-```
-
-Observe that there is no service for the nearestprime deployment at the remote site.
-
-Now, at each of the remote clusters, we want to expose the nearestprime deployment so that it is available elsewhere. At each remote site type `skupper expose deployment nearestprime --port 8000 --protocol http` and press Enter.
+pod/nearestprime-595cb57c8f-h4mlw                 1/1     Running   0          77s
+pod/skupper-router-777cc66994-mg49r               2/2     Running   0          38m
+pod/skupper-service-controller-769c5fbd66-d89bq   1/1     Running   0          38m
 
 ```
-IBMSYD$ skupper expose deployment nearestprime --port 8000 --protocol http
+
+
+Now, at each of the remote clusters, we want to expose the nearestprime deployment so that it is reachable from outside the clusters
+At each remote site type `skupper expose deployment nearestprime --port 8000 --protocol http` and press Enter.
+Then Examine the services and pods on the on-premises cluster. Type `oc get svc,pods` and press Enter.
+
+```
+APAC: yaml$ skupper expose deployment nearestprime --port 8000 --protocol http
 deployment nearestprime exposed as nearestprime
-```
 
-Examine the services and pods on the on-premises cluster. Type `oc get svc,pods` and press Enter.
-
-```
-ONPREM$ oc get svc,pods
-NAME                           TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)               AGE
-service/db                     ClusterIP   10.217.4.144   <none>        5432/TCP              12m
-service/nearestprime           ClusterIP   10.217.4.15    <none>        8000/TCP              2m27s
-service/skupper                ClusterIP   10.217.5.195   <none>        8080/TCP,8081/TCP     19m
-service/skupper-router         ClusterIP   10.217.5.210   <none>        55671/TCP,45671/TCP   19m
-service/skupper-router-local   ClusterIP   10.217.4.250   <none>        5671/TCP              19m
+APAC: yaml$ oc get svc,pods
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)               AGE
+service/db                     ClusterIP   172.30.206.88    <none>        5432/TCP              36m
+service/nearestprime           ClusterIP   172.30.83.253    <none>        8000/TCP              59s
+service/skupper                ClusterIP   172.30.157.143   <none>        8080/TCP,8081/TCP     69m
+service/skupper-router         ClusterIP   172.30.111.79    <none>        55671/TCP,45671/TCP   69m
+service/skupper-router-local   ClusterIP   172.30.167.189   <none>        5671/TCP              69m
 
 NAME                                              READY   STATUS    RESTARTS   AGE
-pod/skupper-router-55f4498857-k6zg2               2/2     Running   0          19m
-pod/skupper-service-controller-64659988b8-j6985   1/1     Running   0          19m
+pod/nearestprime-595cb57c8f-h4mlw                 1/1     Running   0          32m
+pod/skupper-router-777cc66994-mg49r               2/2     Running   0          69m
+pod/skupper-service-controller-769c5fbd66-d89bq   1/1     Running   0          69m
+
 ```
 
-Observe that the remote service is now published on premises but there are no pods for the service. RHAI will handle routing any request to the service over the RHAI network to the remote service and pod.
+From the above you can see that the remote db service is published but there are no pods for the service. 
+RHAI will handle routing any request to the service over the RHAI network to the remote service and pod managed by the skupper gateway.
 
-No matter how many remote sites expose the nearestprime service, there will only be one instance on-premises. This is because the service is an any-cast address. RHAI will handle routing the service request across the remote implementations.
+No matter how many remote sites expose the nearestprime service, there will only be one instance on-premises. 
+This is because the service is an any-cast address. RHAI will handle routing the service request across the remote implementations.
 
 **Note:** If you want to expose them individually then you would use unique names (such as nearestprime-ibmdc, nearestprime-awseur).
 
 Repeat this for each remote site and observe that the service exists everywhere.
 
-### Set up Gateway Forwarding
-One last thing to set up is the gateway forwarding. This enables an on premises application to access the services published by the gateway.
+
+
+## Set up Gateway Forwarding
+One last thing to set up is the gateway forwarding. 
+This enables an on premises application to access the services published by the gateway.
 ```
-ONPREM$ skupper gateway forward nearestprime 8000
+ONPREM: demo-env$ skupper gateway forward nearestprime 8000
+2023/02/14 11:22:16 CREATE io.skupper.router.httpListener dev02-rhel.localdomain-admin-ingress-nearestprime:8000 map[address:nearestprime:8000 name:dev02-rhel.localdomain-admin-ingress-nearestprime:8000 port:8000 protocolVersion:HTTP1 siteId:0f4ea697-9ae9-4da8-9e32-8693c7e5b39e]
 
-2022/07/18 14:32:11 CREATE io.skupper.router.httpListener rh-brbaker-bakerapps-net-bryon-ingress-nearestprime:8000 map[address:nearestprime:8000 name:rh-brbaker-bakerapps-net-bryon-ingress-nearestprime:8000 port:8000 protocolVersion:HTTP1 siteId:12f4cb92-b361-457b-8362-1b77f9a6e9d5]
 ```
 
-### Review all of the connectivity details
-<span style="color:yellow">REVISIT: Review this content again.</span>
-
-The final step is to review the entire network configuration. You run this at any site, but for this demonstartion we will use on-premises. Type the command `skupper network status` and press Enter.
-
-Observe 
-'''
-ONPREM$ skupper network status
+## Review all of the connectivity details
+The final step is to review the entire network configuration. 
+You run this at any site, but for this demonstartion we will use remote site 1 (APAC). 
+Type the command `skupper network status` and press Enter.
+```
+APAC: yaml$ skupper network status
 Sites:
-├─ [local] 2360822 - on-prem 
-│  URL: skupper-inter-router-nearestprime.apps-crc.testing
-│  mode: interior
-│  name: on-prem
-│  namespace: nearestprime
-│  sites linked to: d4c2e69-remote-1
-│  version: 1.0.2
-│  ╰─ Services:
-│     ├─ name: nearestprime
-│     │  address: nearestprime: 8000
-│     │  protocol: http
-│     ╰─ name: db
-│        address: db: 5432
-│        protocol: tcp
-╰─ [remote] d4c2e69 - remote-1
-   URL: skupper-inter-router-nearestprime.violet-cluster-new-2761a99850dd8c23002378ac6ce7f9ad-0000.au-syd.containers.appdomain.cloud
-   name: remote-1
-   namespace: nearestprime
-   version: 1.0.2
+╰─ [local] 02d0f05 - APAC 
+   URL: skupper-inter-router-skupper-apac.apps.cluster-l9jgb.l9jgb.sandbox2077.opentlc.com
+   mode: interior
+   name: APAC
+   namespace: skupper-apac
+   version: 1.2.2
    ╰─ Services:
       ├─ name: nearestprime
       │  address: nearestprime: 8000
       │  protocol: http
       │  ╰─ Targets:
-      │     ╰─ name: nearestprime-d78ccc599-k44x7
+      │     ╰─ name: nearestprime-595cb57c8f-h4mlw
       ╰─ name: db
          address: db: 5432
          protocol: tcp
-
-'''
+```
 
 # Installation and Configuration Finished
 
@@ -268,25 +279,30 @@ Listening for transport dt_socket at address: 5005
 2022-07-17 21:14:24,105 INFO  [io.quarkus] (main) Installed features: [cdi, rest-client, resteasy, resteasy-jsonb, vertx]
 ```
 
-The load generator is now running and listening for instruction on `http://localhost:8080`. You will use surl to control the load generator:
+The load generator is now running and listening for instruction on `http://localhost:8080`. 
+You will need to open a new terminal and use curl to control the load generator:
 
 ### Generate some load
 
 The load generator is controlled by curl requests.
 ```
 curl http://localhost:8080/set_load/0
+
 ```
 
-Generate 10 parallel requests.
+In a new terminal, set the tool to generate 10 parallel requests.
+This will continue to generate 10 parallel requests until you set the load to zero. **Note:** You should never need to increase the load above 10.
 ```
 curl http://localhost:8080/set_load/10
+
 ```
-This will continue to generate 10 parallel requests until you set the load to zero. **Note:** You should never need to increase the load above 10.
+
 
 
 To stop the load type the following command:
 ```
 curl http://localhost:8080/set_load/0
+
 ```
 
 Query the database contents and observe that the load balancing is not round robin. In ```pgadmin4```, query the database:
