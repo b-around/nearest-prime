@@ -290,6 +290,7 @@ curl http://localhost:8080/set_load/0
 
 ```
 
+
 In a new terminal, set the tool to generate 10 parallel requests.
 This will continue to generate 10 parallel requests until you set the load to zero. **Note:** You should never need to increase the load above 10.
 ```
@@ -298,29 +299,22 @@ curl http://localhost:8080/set_load/10
 ```
 
 
-
 To stop the load type the following command:
 ```
 curl http://localhost:8080/set_load/0
 
 ```
 
+
 Query the database contents and observe that the load balancing is not round robin. In ```pgadmin4```, query the database:
 
 ```
-select * from work where nearprime is not null
+APAC: yaml$ psql -h dev02-rhel.localdomain -p 5432 -U demo -W -d demo-db
+Password for user demo: 
+psql (10.23, server 13.7)
+
+demo-db=> select * from work where nearprime is not null;
 ```
-
-It will choose the service instance that has the lowest backlog. It directs trafic to the router that is most likely to process the request in the shortest amount of time.
-
-No need for circuit breaker functionality, it is built into the network.
-
-Interesting use cases: You can use this to do cost-based bursting and burst to the lowest-cost cloud.
-
-### Try Scaling the Application at the Slowest Site
-We expect to see the load balancing change slightly due to the increased capacity at the slowest remote site. (Note: This may not always work because it depends upon the network latency.)
-
-<span style="color:yellow">REVISIT: Write this section.</span>
 
 # End of Demo Script
 
