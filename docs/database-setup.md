@@ -10,7 +10,9 @@ sudo dnf install -y postgresql
 
 # Database Setup
 
-The first set of steps are performed before you start the demonstration.
+The first set of steps are performed before you start the demonstration. 
+The goal is having a database running on the 'local' environment that represents the back-end data consumed by services deployed in an openshift / kubernets cluster.
+
 
 ## Start the "on-prem database" and pre-load the data
 
@@ -20,13 +22,52 @@ The database initialisation scripts are all located in `tools/dbsetup/python`.
 cd tools/dbsetup/python
 ```
 
-## Runing in a shared Python environment
+## Runing in a shared Python environment (option 1)
 If you do not want to work in a pythyon virtual environment enter the following command into a shell:
 ```
 ./setup-pgsql.sh
 ```
+The output from the setup scripts provides all of the database connection details:
+```
+ $./setup-pgsql.sh
+Checking for container runtime...
+Podman is installed
+Installing required python libraries...
+Requirement already satisfied: psycopg2-binary in /usr/local/lib64/python3.6/site-packages
+Starting postgresql database
+31d01bbbe46a092ff3f0f2ac26b54d83ebca24ac97c3fad2594bd8cb6931d0c5
+Waiting for the database to start
+.Initialising database
 
-## Running in an virtual Python environment
+Database connection details:
+============================
+Database server url is:  dev02-rhel.localdomain
+Database connection port: 5432
+Database database:  demo-db
+Database user:  demo
+Database password:  demopass
+To test the database has been initialised run the following query in pgadmin4:
+select * from work
+
+
+```
+Next test the database is reachable and holds demo data
+
+```
+$ psql -h dev02-rhel.localdomain -p 5432 -U demo -W -d demo-db -c "SELECT * FROM work"
+Password for user demo: 
+  id  |  value   | nearprime | processedby 
+------+----------+-----------+-------------
+    0 | 17541633 |           | 
+    1 | 14864000 |           | 
+    2 |  1460679 |           | 
+    3 |  9904657 |           | 
+(remaining rows ommited)
+```
+
+
+
+## Running in an virtual Python environment (option 2)
 
 If you are using Python virtual environments, first create the virtual environment (you only ever need to do this once):
 ``` 
